@@ -184,6 +184,17 @@ impl RedisPool {
         })
     }
 
+    fn expire(&self, py:Python, key: &str, exp: usize) -> PyResult<()> {
+        py.allow_threads(move || {
+            let pool = self.pool.clone();
+            async_std::task::block_on(async move{
+                let mut conn = pool.get().await.map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Pool Get Connection Error: {}", e)))?;
+                conn.expire(key, exp).await.map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("`EXPIRE` Command Error: {}", e)))?;
+                Ok(())
+            })
+        })
+    }
+
     // fn remove(&self, py: Python,value:Vec<&str>) -> PyResult<()> {
     //     py.allow_threads(move || {
     //         let pool = self.pool.clone();
