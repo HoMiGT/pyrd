@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use pyo3::prelude::*;
 use mobc_redis::{mobc, RedisConnectionManager, redis::Client};
 use std::env;
@@ -102,7 +103,7 @@ impl RedisPool {
     ///     ...
     /// ]
     /// "c00","c01",...: 无意义只是占位符
-    fn insert_imgs(&self, py: Python, key: &str, items: Vec<Vec<Vec<&str>>>) -> PyResult<()> {
+    fn insert_imgs(&self, py: Python, key: &str, items: HashMap<usize,Vec<Vec<&str>>>) -> PyResult<()> {
         let split_1 = env::var("RS_SPLIT_1").unwrap_or(";".to_string());
         let split_2 = env::var("RS_SPLIT_2").unwrap_or("|".to_string());
         py.allow_threads(move || {
@@ -110,7 +111,7 @@ impl RedisPool {
             async_std::task::block_on(async move {
                 let mut conn = pool.get().await.map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Pool Get Connection Error: {}", e)))?;
                 let mut insert_vec: Vec<(String, String)> = Vec::new();
-                for (index, imgs) in items.iter().enumerate() {
+                for (index, imgs) in items.iter(){
                     let mut tmp_vec: Vec<String> = Vec::new();
                     for img in imgs.iter() {
                         tmp_vec.push(img.join(split_2.as_str()));
