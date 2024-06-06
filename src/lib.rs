@@ -218,6 +218,40 @@ impl RedisPool {
     //         })
     //     })
     // }
+
+    fn insert_sc_nx(&self, py: Python, key: &str, items: Vec<(&str, &str)>) -> PyResult<()> {
+        py.allow_threads(move || {
+            let pool = self.pool.clone();
+            async_std::task::block_on(async move {
+                let mut conn = pool.get().await.map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Pool Get Connection Error: {}", e)))?;
+                conn.hset_nx(key, items[0].0,items[0].1).await.map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("`HSETNX` Command Error: {}", e)))?;
+                Ok(())
+            })
+        })
+    }
+
+    fn insert_sc_count(&self,py:Python,key:&str,filed:&str,increment:usize) ->PyResult<()>{
+        py.allow_threads(move||{
+            let pool = self.pool.clone();
+            async_std::task::block_on(async move{
+                let mut conn = pool.get().await.map_err(|e|PyErr::new::<pyo3::exceptions::PyValueError,_>(format!("Pool Get Connection Error: {}",e)))?;
+                conn.hincr(key,filed,increment).await.map_err(|e|PyErr::new::<pyo3::exceptions::PyValueError,_>(format!("`HINCRBY` Command Error: {}",e)))?;
+                Ok(())
+            })
+        })
+    }
+
+    fn add_sc(&self,py:Python, value:Vec<&str>)->PyResult<()>{
+        py.allow_threads(move || {
+            let pool = self.pool.clone();
+            async_std::task::block_on(async move {
+                let mut conn = pool.get().await.map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Pool Get Connection Error: {}", e)))?;
+                conn.sadd("RS_SC_LIST", value).await.map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("`SADD` Command Error: {}", e)))?;
+                Ok(())
+            })
+        })
+    }
+
 }
 
 #[pymodule]
